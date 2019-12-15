@@ -1,0 +1,223 @@
+---
+title: "HW2_Estrada-Rand_Noah"
+author: "Noah Estrada-Rand"
+date: "9/8/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+```
+
+# Problem Set 2
+# Problem 8
+## a) Basic Setup
+```{r}
+setwd("C:/Users/noahe/Desktop/MGSC310")
+college <-read.csv("College.csv")
+dim(college)
+```
+## b) First Few Columns of New Data Frame
+```{r}
+View(college)
+rownames(college) = college[,1]
+View(college)
+college <- college[,-1]
+View(college)
+head(college)
+```
+## c)
+
+## i) Summary Statistics
+```{r}
+summary(college)
+```
+
+## ii) Scatterplot Matrix
+```{r}
+pairs(college[,1:10])
+```
+
+## iii) 
+```{r}
+plot(college$Outstate~college$Private,
+     main = "Boxplots of Out of State Cost\nFor Public and Private Colleges",
+     ylab = "Out of State Tuition($)",xlab = "Whether or Not School is Private")
+```
+
+## iv) Making New Variable for Levels of Elite Students
+```{r}
+Elite <- rep("No",nrow(college))
+Elite[college$Top10perc >50] <- "Yes"
+Elite <- as.factor(Elite)
+college <- data.frame(college,Elite)
+summary(college)
+plot(college$Outstate~college$Elite, main = "Boxplot of Schools With 50%+ Students\nFrom Top 10% of High School Class",
+     xlab = "Whether or not >50% of students are from top 10%",
+     ylab = "Cost of Out of State Tuition ($)")
+```
+
+## v)
+```{r}
+par(mfrow = c(2,2))
+hist(college$Room.Board, main = "Histogram for Room and Board",
+     xlab = "Cost",ylab = "Frequency",breaks = 15)
+hist(college$Top10perc,main = "Histogram for Percentage of Students\nFrom top 10%",
+     xlab = "Percentages",ylab = "Frequency", breaks = 10)
+hist(college$perc.alumni, main = "Histogram of % of Alumni Who Donate",
+     xlab = "Percentage",ylab = "Frequency", breaks = 5)
+hist(college$Grad.Rate,main = "Histogram of Graduation Rates",
+     xlab = "Percentages",ylab = "Frequency",breaks = 12)
+```
+
+## vi)
+```{r}
+boxplot(college$Room.Board~college$Private, xlab = "Whether School is Private or Not",
+        ylab = "Cost of Room and Board($)",
+        main = "Boxplots for Private and Public Schools \nand The distribution of Boarding Cost")
+```
+Further analysis of college data highlighted the fact that private schools have a higher room and board cost on average.  Moreover, it appears that although both distributions overlap significantly, the inner quartile range of private colleges is significantly higher than that of public schools.  Thus, when one attends a private school they should expect higher room and board costs.
+```{r}
+ggplot(college,aes(Top10perc,Expend)) + geom_point(aes(Top10perc,Expend,color = Private)) +
+  geom_smooth() + labs(title = "Expenditure Per Student vs \nProportion of 10% of High School Class")+
+  xlab("Proportion of Students Who Were Top 10%") + ylab("Instructional Expenditure Per Student")
+
+```
+In looking at the percentage of new students taken from the top 10% of their high school class, it was found that this particular variable held a strong positive correlation with instructional expenditure per student. This points to a positive linear relationship in which the higher the percetage of elite students, the higher the instructional expenditure per student.  Thus, schools with higher achieving individuals spend more on their instruction than schools with lower achieving students. Furthermore this plot serves to illustrate that the majority of the higher spending schools are private institutions.
+```{r}
+boxplot(college$perc.alumni~college$Private, xlab = "Whether College is Private or Not",
+        ylab = "Percentage of Alumni Who Donate",
+        main = "Boxplots of % of Alumni Who Donate\nvs\nWhether a School is Private Or Not")
+```
+In once again considering the variable of private versus public instituions, it becomes apparent that private schools garner much higher amounts of alumni donations than do public institutions.  However, this does not necessarily mean that private instutions dominate this metric.  Looking at the boxplots one can observe that private institutions also have a much larger range of proportions of alumni who donate in comparison to public institutions.  Yet, it still remains true that private institutions garner a higher percentage of alumni donations on average.
+
+# Problem 10
+## a)
+The boston data set has 506 rows and 14 columns.  In this particular dataset, each row delineates a different town while each column is a different metric of each town.
+```{r}
+library(MASS)
+?Boston
+bos <- Boston
+nrow(bos)
+ncol(bos)
+```
+
+## b)
+```{r}
+ggplot(bos,aes(medv,crim)) + geom_point(aes(medv,crim)) + xlab("Median Value of Owned Homes")+
+  ylab("Crime Rates(per capita)") + geom_smooth()+
+  labs(title = "Scatterplot for Median Value of Owned Homes\nvs\n Crime Rates")
+```
+From the above graph there appears to a weak negative correlation between the median value of owned homes in the town and the crime rate in the town.  When looking at the plot it becomes apparent that the highest crime rates exist in the lower range of median values of owned homes, indicating that wealthier neighborhoods have lower crime rates.
+```{r}
+ggplot(bos,aes(medv,rm)) + geom_point(aes(medv,rm)) + geom_smooth() + 
+  labs(title = "Number of Rooms on Average\nvs\nMedian Owner Occupied Home Value") + 
+  xlab("Median Owner Occupied Home Value") + ylab("Average Number of Rooms")
+```
+As illustrated by the above scatterplot, it becomes apparent that there is a strong positive correlation between median home values and the number of rooms per dwelling.  This poinst to the idea that higher valued homes tend to have more rooms.
+```{r}
+ggplot(bos,aes(rad,tax)) + geom_point(aes(rad,tax)) + xlab("Index of Accesibility to Radial Highways") +
+  ylab("Full Value property-tax rater per $10,000(%)") + 
+  labs(title = "Scatterplot for Accesibility to Radial Highways\nvs\n Property Tax Rates")
+```
+When considering possible correlations between accesibility to radial highways and property taxes, there appears to be little correlation if any.  While calculating the pearson's correlation coefficient for the two variables indicates a strong positive linear relationship between the two, graphical analysis indicates that the relationship may not necessarily be significant in relation to the real world.
+
+## c)
+```{r}
+cor(bos$crim,bos)
+```
+Looking at the correlation between crime rates and all other variables in the dataset, a few interesting trends emerge.  First and foremost, it appears that crime rates have a moderate strength correlation with tax rates in each town.  Furthermore, there is a similar correlational relationship between crime rates and percent of the lower status of the population.  Yet, the strongest correlation concerning crime rates is found between crime and accesibility to radial highways.  A decently strong positive correlation is found between these two variables indicating a positive linear relationship between accesibility to highways and crime.  Thus, it would be somewhat reasonable to assume that the closer a town is to highways, the higher the level of crime.  
+When Looking at negative correlations, median value of owner occupied homes and the proportion of blacks per town are negatively correlated to the level of crime in each town.  Thus, crime rate has a negative linear relationship with both the level of black citizens and median home value in each city.  This implies that the wealthier the neighborhood, the less crime, as highlighted earlier in this report. These findings present significant implications when looking at predictors of crime throughout Boston.
+
+## d)
+```{r}
+range(bos$crim)
+boxplot.stats(bos$crim)
+```
+When weighing the range of crime rates in suburbs throughout Boston, it becomes glaringly apparent that there are numerous outliers in this dataset.  In looking at the list of outliers, the list is extensive, detailing that numerous suburbs have abnormally high levels of crime when compared to the bulk of the remaining data.  Furthermore, the range of this metric is large, ranging from .6% to 88.97% per capita indicative of a very large range of crime rates throughout Boston.
+```{r}
+range(bos$tax)
+boxplot.stats(bos$tax)
+```
+When considering the range of values for property taxes, there do not appear to be any outliers in the given data. In this case, the lowest tax rate per $10,000 is \$187 while the highest is \$711.
+```{r}
+range(bos$ptratio)
+boxplot.stats(bos$ptratio)
+```
+Now, in consideration of pupil-teacher ratios a few outliers appear when alayzing the range of the predictor. In this case, however, the outliers exist on the lower end of the metric, with only abnormally low values existing.  Overall, however, the pupil teacher ratio values range from 12.6 to 22.0 students per teacher in Boston.
+
+## e)
+There are 35 tracts that bound the river.
+```{r}
+sum(bos$chas ==1)
+```
+
+## f)
+The median pupil to teacher ratio across all towns is 19.05 pupils per teacher.
+```{r}
+median(bos$ptratio)
+```
+## g)
+There are two suburbs in Boston with the lowest median value of owner occupied homes is a median value of $5,000. These entries are entries 399 and 406.
+```{r}
+min(bos$medv)
+```
+The values of the remaining predictors in the suburbs with the lowest median value of owner occupied homes are shown below:
+```{r}
+bos[bos$medv == min(bos$medv),]
+```
+## The corresponding ranges are also below:
+
+When comparing the crime rate of the suburbs with the two lowest median value of owner occupied homes to the entire range of crime rates, it becomes clear that suburb 399 is in the lower half of the range while suburb 406 is in the upper half of the range. This is curious as this is the only variable where the two suburbs differ significantly, while all other variables are nearly identical.
+```{r}
+range(bos$crim)
+```
+When looking at proportion of residential lan zoned for lots over 25,00 square feet, the values of suburbs 399 and 406 score the lowest score possible, 0.  This indicates that no lots of residential land are zoned for over 25,000 square feet, indicating that homes and housing may only comprise a small portion of the land in these two suburbs.
+```{r}
+range(bos$zn)
+```
+Regarding the proportion of non-reatail business acres per town, suburbs 399 and 406 fall in the middle of the overall range with both scoring values of 18.1% of land belonging to non-retail businesses.  This indicates that the majority of businesses in these areas are retail based businesses.
+```{r}
+range(bos$indus)
+```
+When analyzing the average number of rooms per dwelling, the suburbs with the lowest median value of owner occupied homes fall close to the middle of the range of values, both around an average of 5 rooms per dwelling.
+```{r}
+range(bos$rm)
+```
+When considering the predictor of age, suburbs 399 and 406 have 100% of their owner-occupied dwellings built before 1940, indicating that both are older suburbs in the Boston area.
+```{r}
+range(bos$age)
+```
+In regards to the weighted mean of distance to five Boston employment centers, suburbs 399 and 406 score close to the minimum value, indicating that they are close to places of employment.
+```{r}
+range(bos$dis)
+```
+However, when considering accesibility from these suburbs to raidal highways, they score the highest value of 24, indicating that they are not conveniently located near radial highways.
+```{r}
+range(bos$rad)
+```
+When considering the full-value property tax rate, suburbs 399 and 406 have among the highest tax rate per $10000.  This indicates that while the neighborhood may be older and not as highly appraised as other suburbs, they still experience relatively high rates of property tax.
+```{r}
+range(bos$tax)
+```
+When weighing the pupil to teacher ratio in these suburbs, they score among the highest ratios both town having a pupil to teacher ratio of 20.2 students per teacher.
+```{r}
+range(bos$ptratio)
+```
+Further analyzing other predictor variables for suburbs 399 and 406, it appears that these two suburbs score clsoe to the highest score for the proportion of blacks per town.
+```{r}
+range(bos$black)
+```
+Overall these findings present curious implications.  While the two suburbs analyzed above  have the lowest median value of owner-occupied homes, they are among one of the highest taxed within the data set.  Furthermore, the fact that zero percent of both suburbs are zone for residential lots over 25,000 square feet, it becomes apparent that the homes there are smaller. 
+
+## H)
+From the dataset, there are 64 total suburbs which average more than 7 rooms per dwelling.
+```{r}
+nrow(bos[bos$rm >7,])
+```
+Further analyses revealed that only 13 suburbs average more than 8 rooms per dwelling.  This is only a small proportion of the total neighborhoods, indicating that far fewer rooms is the norm.  However, when looking at other predictors of these neigborhoods, it becomes clear that these neighborhoods also have other distinct characteristics.  For instance, their crime rate are nearly zero, indicating a safer environment overall.  Furthermore, the median value of owner occupied homes ranges from $21,000 to \$50,000 in value.  Lastly, the pupil teacher ratios are also in the lower end of that predictors values, indicating a more personalized education for the children therein.  Observing the trends in this data regarding these suburbs with homes averaging more than 8 rooms, it becomes clear that these suburbs are much wealthier overall with many of the variables supporting this conclusion.
+```{r}
+nrow(bos[bos$rm >8,])
+```
+

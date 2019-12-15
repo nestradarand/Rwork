@@ -1,0 +1,129 @@
+---
+title: "Problem Set 7"
+author: "Noah Estrada-Rand"
+date: "10/16/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("C:/Users/noahe/Desktop/MGSC310")
+library(plotROC)
+
+```
+
+# a) Create New Variables, Clean Data, and Split into Test and Train Sets
+```{r}
+options(scipen = 50)
+movies <- read.csv("movie_metadata.csv")
+# removing missing values
+movies <- movies[complete.cases(movies),]
+# removing empty content rating or not rated
+movies <- movies[(movies$content_rating != "" & movies$content_rating != "Not Rated"), ]
+# removing movies with budget > 400M
+movies <- movies[movies$budget < 400000000,]
+# creating budget, gross, and profit columns in millions
+movies$grossM <- movies$gross/1e+6
+movies$budgetM <- movies$budget/1e+6
+movies$profitM <- movies$grossM - movies$budgetM
+# creating a column for main genre
+movies$genre_main <- do.call('rbind',strsplit(as.character(movies$genres), '|', fixed=TRUE))[,1]
+# creating a dummy for blockbuster movies
+movies$blockbuster <- ifelse(movies$grossM > 200, 1, 0)
+library(forcats)
+movies$genre_main <- fct_lump(movies$genre_main,5)
+movies$content_rating <- fct_lump(movies$content_rating,3)
+movies$country <- fct_lump(movies$country,2)
+movies$cast_total_facebook_likes000s <- movies$cast_total_facebook_likes / 1000
+# top director
+director_props <- data.frame(prop.table(table(movies$director_name)))
+directors_indx <- order(director_props$Freq,decreasing = TRUE)
+top_directors_indx <- directors_indx[1:floor(0.1*nrow(director_props))]
+top_directors_names <- director_props[top_directors_indx, 1]
+movies$top_director <- ifelse(movies$director_name %in% top_directors_names, 1, 0)
+# train/test split
+set.seed(1861)
+train_idx <- sample(1:nrow(movies),size = floor(0.75*nrow(movies)))
+movies_train <- movies[train_idx,]
+movies_test <- movies[-train_idx,]
+```
+
+# b) Comparing means
+```{r}
+mean(movies_train$blockbuster)
+mean(movies_test$blockbuster)
+t.test(movies_train$blockbuster,movies_test$blockbuster)
+```
+Based on the above T-test it becomes clear that there is a statistically significant difference between the means of both the test and train set values for the blockbuster category.  This is due to the fact that the t-test yielded a .01623 pvalue which is less than the standard .05 alpha value for significance.
+
+# c) Creating Logistic Model for Blockbuster Data
+```{r}
+logit_1 <- glm(blockbuster ~ budgetM + top_director + cast_total_facebook_likes000s+
+                 content_rating + genre_main, family = binomial,
+               data = movies_train)
+summary(logit_1)
+```
+
+# d) Interpretation of Coefficients 
+```{r}
+exp(logit_1$coefficients)
+```
+Looking at the coefficient for content_ratingR it appears that R-rated movies are 85.34% less likely to be a blockbuster than G rated movies, when all other variables are controlled.  Furthermore, when considering the coefficient for genre_mainAdventure, it also becomes apparent that adventure themed movies are 54.44% more likely to be a blockbuster than action movies.  And lastly, when observing the coefficient for top_directory, we find that a movie that is directed by what is considered a "top director" is 81.35% more likely to be a blockbuster than a movie without a top director.
+
+# e) Creating Training and Test Predictions
+```{r}
+preds_train <- data.frame(movies_train, 
+                          predictions = predict(logit_1,type = "response"))
+preds_test <- data.frame(movies_test, 
+                         predictions = predict(logit_1,newdata = movies_test,type = "response"))
+
+```
+
+# f) Using LOOCV to make Predictions
+```{r}
+preds_LOOCV = NULL;
+for(i in 1:nrow(movies_train)){
+  mod <- glm(blockbuster ~ budgetM + top_director + cast_total_facebook_likes000s+
+               content_rating +genre_main, family = binomial,
+             data = movies_train[-i,])
+  preds_LOOCV[i] <- predict(mod,newdata = movies_train[i,],type = "response")
+}
+head(preds_LOOCV)
+preds_train <- data.frame(preds_train,loocvPreds = preds_LOOCV)
+```
+# g) Three ROC Curves
+```{r}
+loocvROC <- ggplot(preds_train,aes(m = loocvPreds,
+                                      d = blockbuster)) +
+  geom_roc(labelsize = 3.5,
+           cutoffs.at = c(.99,.9,.7,.6,.5,.4,.1,.01)) +
+  labs(title = "ROC Curve for LOOCV Predictions",x = "False Positive Fraction",
+       y= "True Positive Fraction")
+inSampleROC <- ggplot(preds_train,aes(m = predictions,
+                                    d = blockbuster)) +
+  geom_roc(labelsize = 3.5,
+           cutoffs.at = c(.99,.9,.7,.6,.5,.4,.1,.01)) +
+  labs(title = "ROC Curve for In-Sample Predictions",x = "False Positive Fraction",
+       y= "True Positive Fraction")
+testROC <- ggplot(preds_test,aes(m = predictions,
+                                    d = blockbuster)) +
+  geom_roc(labelsize = 3.5,
+           cutoffs.at = c(.99,.9,.7,.6,.5,.4,.1,.01)) +
+  labs(title = "ROC Curve for Test Predictions",x = "False Positive Fraction",
+       y= "True Positive Fraction")
+loocvROC
+inSampleROC
+testROC
+```
+In relation to one another, the curves are very similar. However, upon inspection it appears that the ROC curve for test predictions has much less difference between the .7, .6, .5, and .4 cutoffs in terms of true positive fraction. Both the sample and loocv ROC curves had larger differences between the same values for true positive fraction.  Yet, overall, the loocv ROC curve appears more leftward and upward than the other two graphs, indicating that the model for the given cutoff points yielded higher true positive and lower false positive amounts than the in sample and test predictions.
+
+# h)
+```{r}
+calc_auc(loocvROC)
+calc_auc(inSampleROC)
+calc_auc(testROC)
+```
+In order of importance, we place the in sample predic as the highest importance, the loocv predictions as next highest then the test as third highest.  We observe this order given the fact that the predictions for the sample data were trained on the sample data, which typtically leads to a better ability to distinguish between blockbusters and movies that are not.  Moreover, the fact that the test data comes in at the model of lowest importance is conerning, as this sugggests that there is significant variance in the data not accounted for by the initial model.  And lastly, while the loocv ROC only trails the in sample ROC by .01, this may be due to the fact that overall the data has high variance, leading to less accurate predictions of blockbuster status.
+
+
+

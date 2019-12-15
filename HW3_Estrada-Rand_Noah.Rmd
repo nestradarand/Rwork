@@ -1,0 +1,162 @@
+---
+title: "Problem Set 3"
+author: "Noah Estrada-Rand"
+date: "9/19/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(doBy)
+movies <- read.csv("movie_metadata.csv")
+```
+
+# 1) Data Exploration
+
+## A)
+The movies dataset has 5032 rows or instances and 28 columns, or variables.
+```{r}
+dim(movies)
+```
+
+## B)
+The names of the variables in the dataset are as follows:
+```{r}
+colnames(movies)
+```
+
+## C)
+There are 492 empty values in the initial movies dataset.
+```{r}
+sum(is.na(movies$budget))
+```
+After removing the missing values, there are still 28 columns with 4551 rows left. 
+```{r}
+movies <- movies[is.na(movies$budget) == FALSE,]
+dim(movies)
+```
+
+## D) 
+From the code below there are 2175 unique directors.
+```{r}
+length(unique(movies$director_name))
+```
+
+## E)
+```{r}
+ggplot(movies,aes(imdb_score,budget)) + geom_point(aes(imdb_score,budget)) +
+  labs(title = "Scatterplot of IMDB Scores and Budget") + 
+  xlab("IMDB Score") + ylab ("Budget")
+```
+
+## F)
+After removing movies with a budget higher than $400,000,000 the dataset now has only 4539 movies.
+```{r}
+movies <- movies[movies$budget<400000000,]
+dim(movies)
+```
+
+## G)
+```{r}
+ggplot(movies,aes(imdb_score,budget)) + geom_point(aes(imdb_score,budget)) +
+  labs(title = "Scatterplot of IMDB Scores and Budget\nWith Trendline") + 
+  xlab("IMDB Score") + ylab ("Budget") + geom_smooth()
+```
+
+## H
+```{r}
+ggplot(movies,aes(imdb_score,budget)) + geom_point(aes(imdb_score,budget)) +
+  labs(title = "Scatterplot of IMDB Scores and Budget\nWith Trendline") + 
+  xlab("IMDB Score") + ylab ("Budget") + geom_smooth() + 
+  facet_wrap(~content_rating,scales = "free")
+```
+Based on the above graphs, the strongest relationships between IMDB scores and Budget appear for G, PG, and PG-13 movies.
+
+# 2) Data Manipulation
+## A) Creating New Variables
+
+```{r}
+movies$grossM <- movies$gross/1e+6
+movies$budgetM <- movies$budget/1e+6
+movies$genre_main <- do.call('rbind',strsplit(as.character(movies$genres), 
+                                              '|', fixed=TRUE))[,1] ###doesnt work
+
+movies$profitM <- movies$gross-movies$budget
+movies$ROI <- movies$profit/movies$budget
+```
+
+## B)
+The average ROI for films in the dataset is as follows:
+```{r}
+mean(movies$ROI, na.rm = TRUE)
+```
+
+## C)
+```{r}
+hist(movies$ROI, breaks = 10, 
+     main = "Histogram of ROI for Movies",
+     ylab = "Frequency",
+     xlab = "ROI")
+```
+
+## D)
+```{r}
+length(movies[movies$ROI >10,])
+movies <- movies[movies$ROI <10,]
+```
+
+## E)
+```{r}
+ggplot(movies,aes(ROI)) + geom_histogram(aes(fill = genre_main)) + 
+  labs(title = "Histogram of ROI for Movies") + ylab("Frequency") +
+  xlab("ROI")
+```
+
+## F)
+Based on the following code, the films with the highest ROI are Musical movies. 
+```{r}
+summaryBy(ROI~genre_main,data = movies)
+```
+
+## G
+```{r}
+summarys_by_genre <- summaryBy(ROI~genre_main,data = movies)
+ggplot(summarys_by_genre,aes(genre_main,ROI.mean)) + geom_bar(stat = "identity",col = "blue") +
+  labs(title = "Barplot of ROI Mean for Each Main Genre") + 
+  xlab("ROI") + ylab("Main Genres")
+```
+
+# 3) Simple Linear Regression
+
+## A) 
+The following script splits the movies data into training and test data.  80% of the data is reserved for training while the remaining 20% is for testing.
+```{r}
+set.seed(42)
+train_index <- sample(1:nrow(movies),.8*nrow(movies),replace = FALSE) ##returns indices
+train_data <- movies[train_index,]
+test_data <- movies[-train_index,]
+```
+
+## B)
+The new training dataset now has 3515 rows and 33 columns or variables.
+```{r}
+dim(train_data)
+```
+Next, the new testing dataset now has 879 rows and 33 columns or variables.
+```{r}
+dim(test_data)
+```
+
+## C)
+The summary of the regression model built between profitM and IMDB_score is displayed below:
+```{r}
+mod1 <- lm(profitM~imdb_score,data = train_data)
+summary(mod1)
+```
+
+## D)
+The parameters of the model are as follows:
+```{r}
+coef(mod1)
+```

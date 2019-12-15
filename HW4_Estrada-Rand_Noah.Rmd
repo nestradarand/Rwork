@@ -1,0 +1,96 @@
+---
+title: "Problem Set 4"
+author: "Noah Estrada-Rand"
+date: "9/26/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+setwd("C:/Users/noahe/Desktop/MGSC310")
+movies <- read.csv("movie_metadata.csv")
+library(corrplot)
+```
+# Movie Profitability 
+
+## b)
+```{r}
+movies <- movies[!is.na(movies$budget),]
+movies <- movies[!is.na(movies$gross),]
+movies <- movies[movies$budget<4e+8,]
+movies$grossM <- movies$gross/1e+6
+movies$budgetM <- movies$budget/1e+6
+movies$profitM <- movies$grossM-movies$budgetM
+movies$cast_total_facebook_likes000s <- movies$cast_total_facebook_likes / 1000
+set.seed(2019)
+train_indx <- sample(1:nrow(movies), 0.8 * nrow(movies), replace=FALSE)
+movies_train <- movies[train_indx, ]
+movies_test <- movies[-train_indx, ]
+```
+
+## c)
+Number of rows for train and test sets.
+```{r}
+nrow(movies_train)
+nrow(movies_test)
+```
+
+## d)
+```{r}
+nums <- sapply(movies, is.numeric) 
+cormat <- cor(movies[,nums], use="complete.obs")
+print(cormat[,"profitM"])
+```
+
+## e)
+The following is the correlation matrix plot for the movie data.
+```{r}
+corrplot(cormat)
+```
+
+## f)
+The linear model regressing profit against imdb scores and cast total facebook likes is summaryized below:
+```{r}
+mod1 <- lm(profitM~imdb_score + cast_total_facebook_likes000s,data = movies_train)
+summary(mod1)
+```
+
+## g)
+The estimated effect of cast facebook likes is that for every thousand likes increased in cast facebook likes, the profit of the movie incrases by $330,000 dollars.
+
+
+## h)
+The pvalue for imdb_score is <2e-16 while the pvalue for cast_total_facebook_likes is <2e-16.
+Pvalue is the probability of observing the results we got by chance. In this case it is the probability of observing an effect of imdb scores and cast_total_facebook_likes on profit assuming that all other variables are held constant.
+
+## i)
+The estimate pvalue in this case implies that we can reject the null hypothesis which states that there is no relationship between imdb scores and profit and instead say that imbd score has a statistically significant effect on profit.  In this case, both variables are statistically significant at 95% confidence level.
+
+## j)
+The R^2 is .07082 and the adjusted R^2 is .07022. R^2 indicates how much of the variance in the outcome variable, in this case profit, is explained by the model we have created.  In this case, profit is regressed against imdb scores and total Facebook likes in the 1000s, thus R^2 tells us how much of the variation in profit is explained by imdb scores and total cast Facebook likes.
+
+## k) The f stat of the model is 118.1. The f stat tells us the significance of all present coefficients. In other words it checks if all coefficients are zero, and if not, then the score goes up. It infomrs us of the significance and existance of variable effects within our linear model.
+
+## l)
+From the results below, it becomes clear that the amount of residuals is equivalent to the number of rows we have in the train set.
+```{r}
+length(mod1$residuals)
+nrow(movies_train)
+```
+
+## m)
+```{r}
+hist(mod1$residuals, breaks = 40,
+     main = "Histogram of Residuals from Linear Model",
+     xlab = "Residuals")
+```
+This histogram appears to have a normal distrubtion, indicating that our model fits the data well.
+
+## Extra Credit n)
+The manually calculated R squared value is show below. Steps are split up into total sum of squares and residual sum of squares:
+```{r}
+tss <- sum((movies_train$profitM - mean(movies$profitM))^2)
+rss <- sum((mod1$residuals)^2)
+r.squared <- 1-(rss/tss)
+print(r.squared)
+```
+

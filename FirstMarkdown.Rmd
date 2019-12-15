@@ -1,0 +1,90 @@
+---
+title: "FirstMarkdown"
+author: "Noah Estrada-Rand"
+date: "9/5/2019"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is my first R markdown!!!!
+
+# 3
+## a)
+```{r}
+getwd()
+setwd("C:/Users/noahe/Desktop/MGSC310")
+```
+## b)
+```{r}
+id <-  seq(1:150)
+id[2]
+```
+## c)
+```{r}
+set.seed(90)
+netflix <- rnorm(150,20,5)
+netflix
+```
+## d)
+```{r}
+set.seed(90)
+hulu<-runif(150,0,15)
+hulu
+```
+## e)
+```{r}
+par(mfrow  = c(2,1))
+hist(netflix, main = "Netflix Histogram", xlab = "Hours of Watching")
+hist(hulu, main = "Hulu Histogram", xlab="Hours of Watching")
+```
+## f)
+```{r}
+subscription <- c("Yes","No")
+subscription <- factor(subscription)
+subscription
+is.factor(subscription)
+```
+## g)
+```{r}
+set.seed(90)
+amazon <- sample(subscription, size = 150,replace = TRUE)
+amazon[0:20]
+```
+## h
+```{r}
+amazon == "Yes"
+totalSubscriptions = sum(amazon == "Yes")
+```
+## i
+```{r}
+sum((amazon == "No") & (netflix >20))
+```
+## j
+```{r}
+sum((hulu<12) & (netflix <12) & (amazon == "Yes"))
+```
+## k
+```{r}
+id[amazon == "Yes"]
+```
+
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

@@ -1,0 +1,119 @@
+---
+title: "Problem Set 8"
+author: "Noah Estrada-Rand"
+date: "10/20/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(glmnet)
+library(glmnetUtils)
+library(leaps)
+
+```
+
+# a) Reading In Data
+```{r}
+Bikes_df <-  read.csv("day.csv")
+```
+
+#b) Factorizing All Necessary Variables
+```{r}
+Bikes_df[,3:9] <- lapply(Bikes_df[,3:9],factor)
+```
+
+
+# c) Ensuring Factorization
+```{r}
+sapply(Bikes_df,is.factor)
+```
+
+# d) Feature Transformations
+In the code below, the index column is removed and squared terms are added for casual and registered values.
+```{r}
+Bikes_df <- Bikes_df[,2:ncol(Bikes_df)]
+Bikes_df$casual_sq <- Bikes_df$casual^2
+Bikes_df$registered_sq <- Bikes_df$registered^2
+
+```
+
+# e) Splitting Data Into Test and Training Sets
+```{r}
+set.seed(2019)
+train_index <- sample(1:nrow(Bikes_df),(.7*nrow(Bikes_df)),replace = FALSE)
+train_bikes <- Bikes_df[train_index,]
+test_bikes <- Bikes_df[-train_index,]
+```
+
+# f) Fit Forward Stepwise Linear Model
+```{r}
+fwd_fit <- regsubsets(cnt ~ season + holiday + mnth + workingday +
+                              weathersit + temp + hum +windspeed, 
+                      data = train_bikes, nvmax = 8,
+                      method = "forward")
+summary(fwd_fit)
+```
+Based on the summary shown above, the first five variables selected are temp, season4, weathersit3, humidity, season2.  This roughly translates to tempurature, the season of fall, light snow/rain, humidity, and the season of spring.
+
+# g) Fit Backwards Stepwise Linear Model
+```{r}
+bkwd_fit <- regsubsets(cnt ~ season + holiday + mnth + workingday +
+                         weathersit + temp + hum +windspeed, 
+                       data = train_bikes, nvmax = 8,
+                       method = "backward")
+summary(bkwd_fit)
+```
+Based on the above summary, it is shown that the variables used in Model 5 are season2 ,season4, temp, humidity, and windspeed.  These variables are not the same as the previously fitted forward stepwise linear model.  This is because we can never guarantee the same variables to result from the two stepwise approximations. Results of this nature occur because of the fact that foward stepwise approximation starts with one variable and adds the best predictors to the model, moving through all variables.  Backwards does the opposite, starting with a saturated model and removing variables that result in the most insignificant reduction in R^2 value.  Thus the processes will not always converge to the same answer since forwards is based on maximization of increases of R^2 while backwards is focused on the minimization of decreases in R^2.
+
+# h) Ridge Regression Plot for Training Data
+```{r}
+train_ridge <- cv.glmnet(cnt ~ season + holiday + mnth + workingday +
+                           weathersit + temp + hum +windspeed,
+                         data = train_bikes,alpha = 0)
+plot(train_ridge, main = "Ridge Regression for Bikes Training Data")
+```
+
+# i) Lambda Min and Lambda 1se Values
+```{r}
+print(train_ridge$lambda.min)
+print(train_ridge$lambda.1se)
+```
+The meaning of the min lambda mentioned above is that it is the lambda that produced the lowest amount of mean cross validated error.  the 1se lambda on the other hand produced the most regularized model such that the mean squared error is one standard error away from the minimum error.
+
+# j) 
+Ridge Regression Coefficients for Lambda Min
+```{r}
+print(as.matrix(coef(train_ridge,c = train_ridge$lambda.min)))
+```
+Ridge Regression Coefficients for Lambda 1se
+```{r}
+print(as.matrix(coef(train_ridge,c = train_ridge$lambda.1se)))
+```
+Looking at both sets of coefficients above, it becomes clear that the coefficients are generally smaller in the case of lambda 1se.  This is most likely due to the fact that the lambda 1se is a stronger penalty to the coefficients, leading them all to be smaller overall.
+
+# k) Lasso Model Estimation
+```{r}
+train_lasso <- cv.glmnet(cnt ~season + holiday + mnth + workingday +
+                           weathersit + temp + hum +windspeed,
+                         data = train_bikes,alpha = 1)
+```
+
+# l)
+Lasso Model Coefficients at Lambda Min
+```{r}
+print(as.matrix(coef(train_lasso,s = train_lasso$lambda.min)))
+```
+From the coefficients shown above, it is clear that the lasso model at lambda min selected 15 variables in total.
+
+Lasso Model Coefficients at Lambda 1se
+```{r}
+print(as.matrix(coef(train_lasso,s = train_lasso$lambda.1se)))
+```
+From the coefficients above, it becomes clear that the lasso model at lambda 1se selected a total of 11 variables.
+
+# m) Arguments for both Lasso and Ridge Regression
+Both lasso and ridge regression have their rightful place in selecting models with optimized predictors.  However, neither one is preferred for all scenarios.  Lasso is more useful when we know that not all variables play a role in predicting the outcome and as such we can afford to remove them from our models. Furthermore Lasso is a stronger selection when the data generating process is sparse.  Ridge regression, on the other hand is more useful when each variable has a significant effect on the outcome, even a little.  Moreover, in cases where accuracy is paramount ridge regression is the preferred approach to model selection.
+
+
+
